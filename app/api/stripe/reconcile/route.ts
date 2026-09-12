@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return jsonOk({ status: "paid" });
     }
 
-    if (paymentIntent.status === "canceled" || paymentIntent.status === "requires_payment_method") {
+    if (paymentIntent.status === "canceled") {
       await contributionRef.update({ status: "failed" });
       return jsonOk({ status: "failed" });
     }

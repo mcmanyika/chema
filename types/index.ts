@@ -52,6 +52,15 @@ export interface UserProfile {
   stripePayoutsEnabled?: boolean;
   stripeDetailsSubmitted?: boolean;
   communityIds?: string[];
+  referredBy?: string;
+}
+
+export interface Referral {
+  id: string;
+  referrerId: string;
+  referredUserId: string;
+  displayName: string;
+  createdAt: FirestoreDate;
 }
 
 export interface Community {

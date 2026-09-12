@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ContributionCard } from "@/components/dashboard/ContributionCard";
 import { DashboardStatCard } from "@/components/dashboard/DashboardStatCard";
@@ -10,6 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyCampaigns } from "@/hooks/useNotifications";
 import { useMyContributions } from "@/hooks/useMyContributions";
+import { useMyReferrals } from "@/hooks/useMyReferrals";
 import { apiFetch } from "@/lib/api";
 import { formatMoney } from "@/utils/format";
 
@@ -19,6 +20,7 @@ function DashboardInner() {
     profile?.uid,
   );
   const { campaigns } = useMyCampaigns(profile?.uid);
+  const { count: referralCount } = useMyReferrals(profile?.uid);
   const reconciled = useRef(new Set<string>());
 
   useEffect(() => {
@@ -34,6 +36,15 @@ function DashboardInner() {
     }
   }, [contributions]);
 
+  const paidContributions = contributions.filter((item) => item.status === "paid");
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(paidContributions.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedContributions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return paidContributions.slice(start, start + pageSize);
+  }, [currentPage, paidContributions]);
   const communities = profile?.communityIds?.length ?? 0;
   const activeChema = campaigns.filter((item) => item.status === "active").length;
 
@@ -49,14 +60,20 @@ function DashboardInner() {
             Successful gifts appear here automatically after Stripe confirms them.
           </p>
         </div>
-        <Button href="/campaigns">Give Chema</Button>
+        <div className="flex flex-wrap gap-3">
+          <Button href="/referrals" variant="secondary">
+            Invite people
+          </Button>
+          <Button href="/campaigns">Give Chema</Button>
+        </div>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <DashboardStatCard label="Total Given" value={formatMoney(totalGiven)} />
         <DashboardStatCard label="Families Supported" value={familiesSupported} />
         <DashboardStatCard label="Communities" value={communities} />
         <DashboardStatCard label="Active Chema" value={activeChema} />
+        <DashboardStatCard label="Referrals" value={referralCount} hint="People who joined with your link" />
       </div>
 
       <section className="mt-10">
@@ -65,7 +82,7 @@ function DashboardInner() {
           <LoadingState label="Listening for your contributions…" />
         ) : error ? (
           <p className="mt-4 text-sm text-danger">{error}</p>
-        ) : contributions.length === 0 ? (
+        ) : paidContributions.length === 0 ? (
           <div className="mt-4">
             <EmptyState
               title="You have not given Chema yet"
@@ -77,11 +94,34 @@ function DashboardInner() {
           </div>
         ) : (
           <div className="mt-4 grid gap-3">
-            {contributions.map((contribution) => (
+            {pagedContributions.map((contribution) => (
               <ContributionCard key={contribution.id} contribution={contribution} />
             ))}
           </div>
         )}
+        {paidContributions.length > pageSize ? (
+          <div className="mt-6 flex items-center justify-between gap-3">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              Previous
+            </Button>
+            <p className="text-sm text-ink-muted">
+              Page {currentPage} of {totalPages}
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        ) : null}
       </section>
     </div>
   );

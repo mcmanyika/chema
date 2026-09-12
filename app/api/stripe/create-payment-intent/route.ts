@@ -55,11 +55,15 @@ export async function POST(request: Request) {
     });
 
     const destinationAccountId = await resolveDestinationAccount(campaign);
-    await ensurePaymentMethodDomain(hostnameFromRequest(request));
+    try {
+      await ensurePaymentMethodDomain(hostnameFromRequest(request));
+    } catch (error) {
+      console.error("Unable to register Stripe payment method domain", error);
+    }
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: grossAmount,
       currency,
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ["card"],
       metadata: {
         userId: auth.user.uid,
         campaignId: campaign.id,

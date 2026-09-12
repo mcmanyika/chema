@@ -21,6 +21,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { getClientAuth, getClientDb, isFirebaseConfigured } from "@/lib/firebase/client";
+import { peekStoredReferral, recordReferral } from "@/lib/referrals/client";
 import type { UserProfile, UserRole } from "@/types";
 
 interface RegisterInput {
@@ -59,6 +60,14 @@ async function ensureUserDocument(user: User, extras?: Partial<UserProfile>) {
     user.email ??
     "Member";
 
+  const storedReferral = peekStoredReferral();
+  const referredBy =
+    extras?.referredBy && extras.referredBy !== user.uid
+      ? extras.referredBy
+      : storedReferral && storedReferral !== user.uid
+        ? storedReferral
+        : undefined;
+
   await setDoc(ref, {
     uid: user.uid,
     email: user.email ?? extras?.email ?? "",
@@ -68,7 +77,16 @@ async function ensureUserDocument(user: User, extras?: Partial<UserProfile>) {
     photoURL: extras?.photoURL ?? user.photoURL ?? "",
     role: extras?.role ?? ("member" as UserRole),
     createdAt: serverTimestamp(),
+    ...(referredBy ? { referredBy } : {}),
   });
+
+  if (referredBy) {
+    await recordReferral({
+      referrerId: referredBy,
+      referredUserId: user.uid,
+      displayName,
+    });
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

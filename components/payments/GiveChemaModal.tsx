@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContribution } from "@/hooks/useCampaigns";
 import { apiFetch } from "@/lib/api";
-import { getStripePromise, getStripePublishableKey } from "@/lib/stripe/client";
+import { getStripePromise, resolveStripePublishableKey } from "@/lib/stripe/client";
 import { PRESET_GIVE_AMOUNTS, PRESET_PLATFORM_SUPPORT } from "@/types";
 import type { Campaign } from "@/types";
 import { dollarsToCents, formatMoney } from "@/utils/format";
@@ -46,6 +46,7 @@ function GiveChemaFlow({ campaign, onClose }: { campaign: Campaign; onClose: () 
   const [submitting, setSubmitting] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [contributionId, setContributionId] = useState<string | null>(null);
+  const [failureMessage, setFailureMessage] = useState<string | null>(null);
 
   const familyDollars = preset === "custom" ? Number(customAmount) || 0 : preset;
   const supportDollars = customSupport ? Number(customSupport) || 0 : support;
@@ -62,8 +63,9 @@ function GiveChemaFlow({ campaign, onClose }: { campaign: Campaign; onClose: () 
       toast.error("Please give at least $1.");
       return;
     }
-    if (!getStripePublishableKey()) {
-      toast.error("Stripe is not configured for this site. Add a pk_ publishable key.");
+    const publishableKey = await resolveStripePublishableKey();
+    if (!publishableKey) {
+      toast.error("Stripe is not configured for this site. Add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (pk_test_ or pk_live_).");
       return;
     }
 
@@ -113,8 +115,16 @@ function GiveChemaFlow({ campaign, onClose }: { campaign: Campaign; onClose: () 
     return (
       <div className="py-6 text-center">
         <h3 className="font-serif text-2xl text-ink">Payment was not completed.</h3>
-        <p className="mt-2 text-sm text-ink-muted">Please try again.</p>
-        <Button className="mt-6" onClick={() => setPhase("form")}>
+        <p className="mt-2 text-sm text-ink-muted">
+          {failureMessage ?? "Please try again."}
+        </p>
+        <Button
+          className="mt-6"
+          onClick={() => {
+            setFailureMessage(null);
+            setPhase(clientSecret ? "pay" : "form");
+          }}
+        >
           Try again
         </Button>
       </div>
@@ -141,7 +151,10 @@ function GiveChemaFlow({ campaign, onClose }: { campaign: Campaign; onClose: () 
           contributionId={contributionId}
           onConfirming={() => setPhase("confirming")}
           onSuccess={() => setPhase("success")}
-          onFailed={() => setPhase("failed")}
+          onFailed={(message) => {
+            setFailureMessage(message);
+            setPhase("failed");
+          }}
         />
       </Elements>
     );
@@ -287,7 +300,7 @@ function CheckoutForm({
   confirming: boolean;
   onConfirming: () => void;
   onSuccess: () => void;
-  onFailed: () => void;
+  onFailed: (message: string) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -296,7 +309,9 @@ function CheckoutForm({
 
   useEffect(() => {
     if (contribution?.status === "paid") onSuccess();
-    if (contribution?.status === "failed") onFailed();
+    if (contribution?.status === "failed") {
+      onFailed("Stripe could not complete this gift. Please try another card.");
+    }
   }, [contribution?.status, onFailed, onSuccess]);
 
   if (confirming) {
@@ -312,16 +327,32 @@ function CheckoutForm({
   }
 
   async function confirm() {
-    if (!stripe || !elements) return;
+    if (!stripe || !elements) {
+      toast.error("Stripe is still loading. Please wait a moment and try again.");
+      return;
+    }
     setBusy(true);
+    if (contributionId) {
+      sessionStorage.setItem(
+        "chemaGift",
+        JSON.stringify({ contributionId, path: window.location.pathname }),
+      );
+    }
+    const returnUrl = `${window.location.origin}${window.location.pathname}?chema_gift=${contributionId ?? ""}`;
     const result = await stripe.confirmPayment({
       elements,
+      confirmParams: { return_url: returnUrl },
       redirect: "if_required",
     });
 
     if (result.error) {
-      toast.error(result.error.message ?? "Payment was not completed.");
-      onFailed();
+      const message = result.error.message ?? "Payment was not completed.";
+      toast.error(message);
+      if (result.error.type === "card_error" || result.error.type === "validation_error") {
+        setBusy(false);
+        return;
+      }
+      onFailed(message);
       setBusy(false);
       return;
     }

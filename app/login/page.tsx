@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { firebaseAuthMessage } from "@/lib/firebase/errors";
+import { peekStoredReferral } from "@/lib/referrals/client";
 import { loginSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/Button";
 import { FieldError, Input, Label } from "@/components/ui/Input";
@@ -84,7 +85,10 @@ function LoginForm() {
       </Button>
       <p className="mt-6 text-center text-sm text-ink-muted">
         New here?{" "}
-        <Link href={`/register?next=${encodeURIComponent(next)}`} className="text-forest">
+        <Link
+          href={`/register?next=${encodeURIComponent(next)}${peekStoredReferral() ? `&ref=${encodeURIComponent(peekStoredReferral()!)}` : ""}`}
+          className="text-forest"
+        >
           Create an account
         </Link>
       </p>

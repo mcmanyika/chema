@@ -145,6 +145,20 @@ service cloud.firestore {
       }
     }
 
+    match /referrals/{referralId} {
+      allow read: if signedIn() && (
+        resource.data.referrerId == request.auth.uid
+        || resource.data.referredUserId == request.auth.uid
+        || isAdmin()
+      );
+      allow create: if signedIn()
+        && request.auth.uid == referralId
+        && request.resource.data.referredUserId == request.auth.uid
+        && request.resource.data.referrerId is string
+        && request.resource.data.referrerId != request.auth.uid;
+      allow update, delete: if false;
+    }
+
     match /processedStripeEvents/{eventId} {
       allow read, write: if false;
     }

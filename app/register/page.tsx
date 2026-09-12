@@ -15,6 +15,7 @@ function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/dashboard";
+  const ref = params.get("ref");
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -50,7 +51,9 @@ function RegisterForm() {
     <div className="mx-auto max-w-md px-4 py-16">
       <h1 className="font-serif text-4xl text-ink">Join Chema</h1>
       <p className="mt-2 text-sm text-ink-muted">
-        Create an account to give, start a campaign, or join a community.
+        {ref
+          ? "You were invited to Chema. Create an account to give, start a campaign, or join a community."
+          : "Create an account to give, start a campaign, or join a community."}
       </p>
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="grid grid-cols-2 gap-3">
