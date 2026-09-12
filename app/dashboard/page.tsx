@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ContributionCard } from "@/components/dashboard/ContributionCard";
+import {
+  applyContributionFilters,
+  campaignFilterOptions,
+  ContributionFilters,
+  defaultContributionFilters,
+  hasActiveContributionFilters,
+} from "@/components/dashboard/ContributionFilters";
 import { DashboardStatCard } from "@/components/dashboard/DashboardStatCard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -39,12 +46,27 @@ function DashboardInner() {
   const paidContributions = contributions.filter((item) => item.status === "paid");
   const pageSize = 10;
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(1, Math.ceil(paidContributions.length / pageSize));
+  const [filters, setFilters] = useState(defaultContributionFilters);
+  const campaignOptions = useMemo(
+    () => campaignFilterOptions(paidContributions),
+    [paidContributions],
+  );
+  const filteredContributions = useMemo(
+    () => applyContributionFilters(paidContributions, filters),
+    [filters, paidContributions],
+  );
+  const filtersActive = hasActiveContributionFilters(filters);
+  const totalPages = Math.max(1, Math.ceil(filteredContributions.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const pagedContributions = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return paidContributions.slice(start, start + pageSize);
-  }, [currentPage, paidContributions]);
+    return filteredContributions.slice(start, start + pageSize);
+  }, [currentPage, filteredContributions]);
+
+  function updateFilters(next: typeof filters) {
+    setFilters(next);
+    setPage(1);
+  }
   const communities = profile?.communityIds?.length ?? 0;
   const activeChema = campaigns.filter((item) => item.status === "active").length;
 
@@ -56,9 +78,6 @@ function DashboardInner() {
           <h1 className="mt-2 font-serif text-4xl text-ink">
             {profile?.firstName ? `Hello, ${profile.firstName}` : "Your dashboard"}
           </h1>
-          <p className="mt-2 text-sm text-ink-muted">
-            Successful gifts appear here automatically after Stripe confirms them.
-          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button href="/referrals" variant="secondary">
@@ -77,7 +96,32 @@ function DashboardInner() {
       </div>
 
       <section className="mt-10">
-        <h2 className="font-serif text-2xl text-ink">Recent Contributions</h2>
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <h2 className="font-serif text-2xl text-ink">Recent Contributions</h2>
+          {paidContributions.length > 0 ? (
+            <p className="text-sm text-ink-muted">
+              {filtersActive
+                ? `${filteredContributions.length} of ${paidContributions.length} gifts`
+                : `${paidContributions.length} ${paidContributions.length === 1 ? "gift" : "gifts"}`}
+            </p>
+          ) : null}
+        </div>
+        {paidContributions.length > 0 ? (
+          <ContributionFilters
+            value={filters}
+            onChange={updateFilters}
+            campaigns={campaignOptions}
+          />
+        ) : null}
+        {filtersActive ? (
+          <button
+            type="button"
+            className="mt-3 text-sm text-forest hover:underline"
+            onClick={() => updateFilters(defaultContributionFilters)}
+          >
+            Clear filters
+          </button>
+        ) : null}
         {loading ? (
           <LoadingState label="Listening for your contributions…" />
         ) : error ? (
@@ -92,6 +136,21 @@ function DashboardInner() {
               }
             />
           </div>
+        ) : filteredContributions.length === 0 ? (
+          <div className="mt-4">
+            <EmptyState
+              title="No gifts match these filters"
+              description="Try a different search, campaign, date, or amount."
+              action={
+                <Button
+                  variant="secondary"
+                  onClick={() => updateFilters(defaultContributionFilters)}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          </div>
         ) : (
           <div className="mt-4 grid gap-3">
             {pagedContributions.map((contribution) => (
@@ -99,7 +158,7 @@ function DashboardInner() {
             ))}
           </div>
         )}
-        {paidContributions.length > pageSize ? (
+        {filteredContributions.length > pageSize ? (
           <div className="mt-6 flex items-center justify-between gap-3">
             <Button
               size="sm"
