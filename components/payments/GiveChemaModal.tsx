@@ -323,6 +323,16 @@ function CheckoutForm({
     }
 
     onConfirming();
+    if (contributionId) {
+      try {
+        await apiFetch<{ status: string }>("/api/stripe/reconcile", {
+          method: "POST",
+          body: JSON.stringify({ contributionId }),
+        });
+      } catch {
+        // Webhook confirmation can still complete the gift.
+      }
+    }
     setBusy(false);
   }
 

@@ -58,6 +58,10 @@ export const createPaymentIntentSchema = z.object({
   message: z.string().trim().max(500).optional(),
 });
 
+export const reconcilePaymentSchema = z.object({
+  contributionId: z.string().min(1),
+});
+
 export const createCommunitySchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().min(10).max(1000),

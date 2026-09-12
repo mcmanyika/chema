@@ -175,10 +175,16 @@ export function useContribution(contributionId?: string | null) {
   useEffect(() => {
     if (!contributionId || !configured) return;
 
-    return onSnapshot(doc(getClientDb(), "contributions", contributionId), (snap) => {
-      setContribution(snap.exists() ? { status: String(snap.data()?.status ?? "") } : null);
-      setLoading(false);
-    });
+    return onSnapshot(
+      doc(getClientDb(), "contributions", contributionId),
+      (snap) => {
+        setContribution(snap.exists() ? { status: String(snap.data()?.status ?? "") } : null);
+        setLoading(false);
+      },
+      () => {
+        setLoading(false);
+      },
+    );
   }, [configured, contributionId]);
 
   return {

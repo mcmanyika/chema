@@ -52,6 +52,7 @@ export async function verifyIdToken(authorization?: string | null) {
   if (!token) return null;
 
   if (!isFirebaseAdminConfigured()) {
+    console.error("Firebase Admin is not configured; cannot verify the signed-in user.");
     return null;
   }
 

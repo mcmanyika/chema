@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ContributionCard } from "@/components/dashboard/ContributionCard";
 import { DashboardStatCard } from "@/components/dashboard/DashboardStatCard";
@@ -9,6 +10,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyCampaigns } from "@/hooks/useNotifications";
 import { useMyContributions } from "@/hooks/useMyContributions";
+import { apiFetch } from "@/lib/api";
 import { formatMoney } from "@/utils/format";
 
 function DashboardInner() {
@@ -17,6 +19,21 @@ function DashboardInner() {
     profile?.uid,
   );
   const { campaigns } = useMyCampaigns(profile?.uid);
+  const reconciled = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const contribution of contributions) {
+      if (contribution.status !== "pending" || reconciled.current.has(contribution.id)) continue;
+      reconciled.current.add(contribution.id);
+      void apiFetch("/api/stripe/reconcile", {
+        method: "POST",
+        body: JSON.stringify({ contributionId: contribution.id }),
+      }).catch(() => {
+        reconciled.current.delete(contribution.id);
+      });
+    }
+  }, [contributions]);
+
   const communities = profile?.communityIds?.length ?? 0;
   const activeChema = campaigns.filter((item) => item.status === "active").length;
 
