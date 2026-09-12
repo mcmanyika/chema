@@ -25,7 +25,6 @@ export function MobileNav({
     { href: "/campaigns/create", label: "Start a Chema" },
     { href: "/communities", label: "Communities" },
     ...(signedIn ? [{ href: "/dashboard", label: "Dashboard" }] : []),
-    ...(signedIn ? [{ href: "/referrals", label: "Referrals" }] : []),
     ...(signedIn ? [{ href: "/profile", label: "Profile" }] : []),
     ...(signedIn ? [{ href: "/settings", label: "Settings" }] : []),
     ...(isAdminRole(profile?.role) ? [{ href: "/admin", label: "Admin" }] : []),

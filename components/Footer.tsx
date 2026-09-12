@@ -14,6 +14,7 @@ export function Footer() {
           <Link href="/campaigns">Campaigns</Link>
           <Link href="/communities">Communities</Link>
           <Link href="/campaigns/create">Start a Chema</Link>
+          <Link href="/referrals">Referrals</Link>
         </div>
       </div>
     </footer>

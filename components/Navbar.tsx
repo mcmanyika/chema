@@ -44,17 +44,6 @@ export function Navbar() {
           ))}
           {signedIn ? (
             <Link
-              href="/referrals"
-              className={cn(
-                "text-sm",
-                pathname.startsWith("/referrals") ? "text-forest" : "text-ink-muted hover:text-ink",
-              )}
-            >
-              Referrals
-            </Link>
-          ) : null}
-          {signedIn ? (
-            <Link
               href="/dashboard"
               className={cn(
                 "text-sm",
