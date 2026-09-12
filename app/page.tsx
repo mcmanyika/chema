@@ -82,23 +82,19 @@ export default function HomePage() {
             {
               icon: HeartHandshake,
               title: "Start a Chema",
-              body: "A family member or trusted friend shares the story, funeral details, and who should receive support.",
             },
             {
               icon: Handshake,
               title: "Give with dignity",
-              body: "Friends at home and abroad give what they can. The family’s amount is never quietly reduced.",
             },
             {
               icon: Users,
               title: "Stand together",
-              body: "Contributions, messages, and updates gather in one place so no family has to coordinate grief alone.",
             },
           ].map((item) => (
             <div key={item.title}>
               <item.icon className="h-7 w-7 text-white/80" />
               <h3 className="mt-4 font-serif text-2xl">{item.title}</h3>
-              <p className="mt-2 text-sm leading-7 text-white/80">{item.body}</p>
             </div>
           ))}
         </div>
