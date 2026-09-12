@@ -42,7 +42,9 @@ export const updateCampaignSchema = z.object({
   description: z.string().trim().min(20).max(8000).optional(),
   deceasedPhotoUrl: z.string().url().optional().or(z.literal("")),
   goalAmount: z.number().int().nonnegative().nullable().optional(),
-  status: z.enum(["paused", "closed", "active"]).optional(),
+  status: z
+    .enum(["draft", "pending_verification", "active", "paused", "closed"])
+    .optional(),
 });
 
 export const campaignUpdateSchema = z.object({

@@ -193,6 +193,31 @@ export function useContribution(contributionId?: string | null) {
   };
 }
 
+export function useAdminCampaigns() {
+  const configured = isFirebaseConfigured();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(configured);
+
+  useEffect(() => {
+    if (!configured) return;
+
+    return onSnapshot(
+      query(collection(getClientDb(), "campaigns"), orderBy("createdAt", "desc")),
+      (snap) => {
+        setCampaigns(
+          snap.docs.map((item) => ({
+            id: item.id,
+            ...(item.data() as Omit<Campaign, "id">),
+          })),
+        );
+        setLoading(false);
+      },
+    );
+  }, [configured]);
+
+  return { campaigns, loading };
+}
+
 export function usePendingCampaigns() {
   const configured = isFirebaseConfigured();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);

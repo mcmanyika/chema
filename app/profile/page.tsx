@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { CampaignStatusSelect } from "@/components/campaigns/CampaignStatusSelect";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyCampaigns } from "@/hooks/useNotifications";
+import { isAdminRole } from "@/lib/auth/roles";
 
 function ProfileInner() {
   const { profile, signOut } = useAuth();
@@ -43,13 +45,19 @@ function ProfileInner() {
         <h2 className="font-serif text-2xl">Campaigns you organize</h2>
         <ul className="mt-4 space-y-3">
           {campaigns.map((campaign) => (
-            <li key={campaign.id} className="rounded-2xl border border-line bg-card px-4 py-3">
-              <Link href={`/campaigns/${campaign.slug}`} className="font-medium hover:underline">
-                {campaign.title}
-              </Link>
-              <p className="text-sm text-ink-muted">
-                {campaign.status.replaceAll("_", " ")} · {campaign.verificationStatus}
-              </p>
+            <li
+              key={campaign.id}
+              className="flex flex-col justify-between gap-3 rounded-2xl border border-line bg-card px-4 py-3 sm:flex-row sm:items-center"
+            >
+              <div>
+                <Link href={`/campaigns/${campaign.slug}`} className="font-medium hover:underline">
+                  {campaign.title}
+                </Link>
+                <p className="text-sm text-ink-muted">
+                  {campaign.status.replaceAll("_", " ")} · {campaign.verificationStatus}
+                </p>
+              </div>
+              {isAdminRole(profile.role) ? <CampaignStatusSelect campaign={campaign} /> : null}
             </li>
           ))}
         </ul>

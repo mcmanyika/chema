@@ -3,7 +3,7 @@ import { getClientAuth, getClientDb } from "@/lib/firebase/client";
 import { createCampaignSchema, updateCampaignSchema, campaignUpdateSchema } from "@/lib/validations";
 import { slugify, uniqueSlug } from "@/utils/slug";
 import type { CreateCampaignInput } from "@/lib/validations";
-import type { Community } from "@/types";
+import type { CampaignStatus, Community } from "@/types";
 
 function requireUser() {
   const user = getClientAuth().currentUser;
@@ -72,7 +72,7 @@ export async function updateCampaignClient(
     location?: string;
     goalAmount?: number | null;
     deceasedPhotoUrl?: string;
-    status?: "paused" | "closed" | "active";
+    status?: CampaignStatus;
   },
 ) {
   requireUser();
@@ -82,6 +82,45 @@ export async function updateCampaignClient(
     ...parsed,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function setCampaignStatusClient(campaignId: string, status: CampaignStatus) {
+  requireUser();
+  const db = getClientDb();
+  const campaignRef = doc(db, "campaigns", campaignId);
+  const snap = await getDoc(campaignRef);
+  if (!snap.exists()) {
+    throw new Error("Campaign not found.");
+  }
+
+  const data = snap.data();
+  const updates: Record<string, unknown> = {
+    status,
+    updatedAt: serverTimestamp(),
+  };
+  const becomingPublic = status === "active" && data.verificationStatus !== "verified";
+  if (status === "active") {
+    updates.verificationStatus = "verified";
+  }
+
+  await updateDoc(campaignRef, updates);
+
+  if (becomingPublic && data.organizerId) {
+    try {
+      await addDoc(collection(db, "notifications"), {
+        userId: data.organizerId as string,
+        type: "campaign_verified",
+        title: "Your Chema is verified",
+        body: `${String(data.title ?? "Your Chema")} is now public and can receive gifts.`,
+        campaignId,
+        href: `/campaigns/${String(data.slug ?? campaignId)}`,
+        read: false,
+        createdAt: serverTimestamp(),
+      });
+    } catch {
+      // Notification is optional if rules block it.
+    }
+  }
 }
 
 export async function verifyCampaignClient(campaignId: string) {

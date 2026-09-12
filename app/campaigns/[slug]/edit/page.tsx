@@ -5,16 +5,17 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/Button";
+import { CampaignStatusSelect } from "@/components/campaigns/CampaignStatusSelect";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCampaign } from "@/hooks/useCampaigns";
 import { postCampaignUpdateClient, updateCampaignClient } from "@/lib/campaigns/client";
-import { canManageCampaign } from "@/lib/auth/roles";
+import { canManageCampaign, isAdminRole } from "@/lib/auth/roles";
 import type { Campaign } from "@/types";
 import { centsToDollars, dollarsToCents } from "@/utils/format";
 
-function EditForm({ campaign }: { campaign: Campaign }) {
+function EditForm({ campaign, isAdmin }: { campaign: Campaign; isAdmin: boolean }) {
   const router = useRouter();
   const [title, setTitle] = useState(campaign.title);
   const [description, setDescription] = useState(campaign.description);
@@ -79,14 +80,21 @@ function EditForm({ campaign }: { campaign: Campaign }) {
         <Button onClick={save} disabled={busy}>
           Save changes
         </Button>
-        <div className="flex flex-wrap gap-2 pt-4">
-          <Button variant="secondary" onClick={() => void setStatus("paused")}>
-            Pause
-          </Button>
-          <Button variant="secondary" onClick={() => void setStatus("closed")}>
-            Close
-          </Button>
-        </div>
+        {isAdmin ? (
+          <div className="pt-4">
+            <Label htmlFor="status">Campaign status</Label>
+            <CampaignStatusSelect id="status" campaign={campaign} />
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 pt-4">
+            <Button variant="secondary" onClick={() => void setStatus("paused")}>
+              Pause
+            </Button>
+            <Button variant="secondary" onClick={() => void setStatus("closed")}>
+              Close
+            </Button>
+          </div>
+        )}
       </div>
 
       <section className="mt-12 border-t border-line pt-8">
@@ -122,7 +130,13 @@ function EditInner() {
     return <p className="px-4 py-16 text-center">You cannot edit this campaign.</p>;
   }
 
-  return <EditForm key={campaign.id} campaign={campaign} />;
+  return (
+    <EditForm
+      key={campaign.id}
+      campaign={campaign}
+      isAdmin={isAdminRole(profile?.role)}
+    />
+  );
 }
 
 export default function EditCampaignPage() {

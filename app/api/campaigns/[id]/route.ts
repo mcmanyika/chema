@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { updateCampaignSchema } from "@/lib/validations";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { canManageCampaign } from "@/lib/auth/roles";
+import { canManageCampaign, isAdminRole } from "@/lib/auth/roles";
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/http";
 import { requireUser } from "@/lib/server/auth";
 import type { Campaign } from "@/types";
@@ -38,10 +38,17 @@ export async function PATCH(
     if (parsed.goalAmount !== undefined) updates.goalAmount = parsed.goalAmount;
     if (parsed.funeralDate) updates.funeralDate = new Date(parsed.funeralDate);
     if (parsed.status) {
-      if (parsed.status === "active" && campaign.verificationStatus !== "verified") {
+      const admin = isAdminRole(auth.profile.role);
+      if (parsed.status === "active" && campaign.verificationStatus !== "verified" && !admin) {
         return jsonError("Only a verified campaign can be set active by the organizer.", 400);
       }
+      if (!admin && !["paused", "closed", "active"].includes(parsed.status)) {
+        return jsonError("Organizers can pause, close, or reopen a verified campaign.", 400);
+      }
       updates.status = parsed.status;
+      if (admin && parsed.status === "active") {
+        updates.verificationStatus = "verified";
+      }
     }
 
     await ref.update(updates);
