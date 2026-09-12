@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/Button";
 export function CampaignCard({
   campaign,
   onGive,
+  showDescription = true,
 }: {
   campaign: Campaign;
   onGive?: (campaign: Campaign) => void;
+  showDescription?: boolean;
 }) {
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
@@ -42,9 +44,11 @@ export function CampaignCard({
           {campaign.verificationStatus === "verified" ? <VerifiedBadge /> : null}
         </div>
         <p className="text-sm font-medium text-forest">{campaign.deceasedName}</p>
-        <p className="mt-2 flex-1 text-sm leading-6 text-ink-muted">
-          {truncate(campaign.description, 130)}
-        </p>
+        {showDescription ? (
+          <p className="mt-2 flex-1 text-sm leading-6 text-ink-muted">
+            {truncate(campaign.description, 130)}
+          </p>
+        ) : null}
         <div className="mt-4 border-t border-line pt-4">
           <p className="font-serif text-2xl text-ink">{formatMoney(campaign.amountRaised, campaign.currency)}</p>
           <p className="mt-1 text-sm text-ink-muted">
