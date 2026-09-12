@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { createPaymentIntentSchema } from "@/lib/validations";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { getStripe } from "@/lib/stripe/server";
+import { ensurePaymentMethodDomain, getStripe, hostnameFromRequest } from "@/lib/stripe/server";
 import { handleRouteError, jsonError, jsonOk } from "@/lib/api/http";
 import { requireUser } from "@/lib/server/auth";
 import type { Campaign, UserProfile } from "@/types";
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     });
 
     const destinationAccountId = await resolveDestinationAccount(campaign);
+    await ensurePaymentMethodDomain(hostnameFromRequest(request));
     const paymentIntent = await getStripe().paymentIntents.create({
       amount: grossAmount,
       currency,

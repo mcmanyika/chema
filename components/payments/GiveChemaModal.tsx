@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useContribution } from "@/hooks/useCampaigns";
 import { apiFetch } from "@/lib/api";
-import { getStripePromise } from "@/lib/stripe/client";
+import { getStripePromise, getStripePublishableKey } from "@/lib/stripe/client";
 import { PRESET_GIVE_AMOUNTS, PRESET_PLATFORM_SUPPORT } from "@/types";
 import type { Campaign } from "@/types";
 import { dollarsToCents, formatMoney } from "@/utils/format";
@@ -60,6 +60,10 @@ function GiveChemaFlow({ campaign, onClose }: { campaign: Campaign; onClose: () 
     }
     if (familyCents < 100) {
       toast.error("Please give at least $1.");
+      return;
+    }
+    if (!getStripePublishableKey()) {
+      toast.error("Stripe is not configured for this site. Add a pk_ publishable key.");
       return;
     }
 
