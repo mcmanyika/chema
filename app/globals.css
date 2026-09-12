@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f6f3ee;
+  --cream-dark: #ebe6dc;
+  --ink: #1c1917;
+  --ink-muted: #57534e;
+  --forest: #2c4a3e;
+  --forest-light: #3d6b54;
+  --earth: #8b5e3c;
+  --line: #e4dfd6;
+  --card: #fffdf9;
+  --danger: #9b3a2f;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-cream-dark: var(--cream-dark);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-forest: var(--forest);
+  --color-forest-light: var(--forest-light);
+  --color-earth: var(--earth);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-dm-sans);
+  --font-serif: var(--font-source-serif);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+}
+
+::selection {
+  background: #d7e3db;
+  color: var(--ink);
+}
+
+.font-serif {
+  font-family: var(--font-source-serif), ui-serif, Georgia, serif;
+}

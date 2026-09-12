@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(userPath())
+        && get(userPath()).data.role in ['community_admin', 'platform_admin'];
+    }
+
+    function campaignVisible(data) {
+      return data.status in ['active', 'closed']
+        || (signedIn() && data.organizerId == request.auth.uid)
+        || (signedIn() && data.beneficiaryId == request.auth.uid)
+        || isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isUser(userId) || isAdmin();
+      allow create: if isUser(userId)
+        && request.resource.data.uid == userId
+        && request.resource.data.role == 'member';
+      allow update: if isUser(userId) && (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['communityIds'])
+        || (
+          request.resource.data.role == resource.data.role
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+            'role',
+            'stripeConnectedAccountId',
+            'stripeConnectStatus',
+            'stripeChargesEnabled',
+            'stripePayoutsEnabled',
+            'stripeDetailsSubmitted'
+          ])
+        )
+      ) || isAdmin();
+      allow delete: if false;
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if campaignVisible(resource.data);
+      allow create: if signedIn()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.status == 'pending_verification'
+        && request.resource.data.verificationStatus == 'pending'
+        && request.resource.data.amountRaised == 0
+        && request.resource.data.contributorCount == 0;
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.organizerId == request.auth.uid
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.amountRaised == resource.data.amountRaised
+        && request.resource.data.contributorCount == resource.data.contributorCount
+        && request.resource.data.verificationStatus == resource.data.verificationStatus
+        && (
+          request.resource.data.status == resource.data.status
+          || request.resource.data.status in ['paused', 'closed', 'pending_verification']
+        )
+      );
+      allow delete: if false;
+
+      match /updates/{updateId} {
+        allow read: if campaignVisible(get(/databases/$(database)/documents/campaigns/$(campaignId)).data);
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/campaigns/$(campaignId)).data.organizerId == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /chemaBook/{entryId} {
+        allow read: if campaignVisible(get(/databases/$(database)/documents/campaigns/$(campaignId)).data);
+        allow write: if false;
+      }
+    }
+
+    match /contributions/{contributionId} {
+      allow read: if isUser(resource.data.userId) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isUser(resource.data.userId) || isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isUser(resource.data.userId);
+      allow create: if isAdmin();
+      allow delete: if false;
+      allow update: if isUser(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    function isCommunityOwner(communityId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId))
+        && get(/databases/$(database)/documents/communities/$(communityId)).data.createdBy == request.auth.uid;
+    }
+
+    function isCommunityAdminMember(communityId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function canManageCommunity(communityId) {
+      return isCommunityOwner(communityId) || isCommunityAdminMember(communityId);
+    }
+
+    match /communities/{communityId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberCount']);
+      allow delete: if false;
+
+      match /members/{userId} {
+        allow read: if true;
+        allow create: if canManageCommunity(communityId);
+        allow update: if false;
+        allow delete: if signedIn() && (
+          request.auth.uid == userId
+          || canManageCommunity(communityId)
+        );
+      }
+
+      match /joinRequests/{userId} {
+        allow read: if isUser(userId) || canManageCommunity(communityId);
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.userId == userId;
+        allow update: if false;
+        allow delete: if isUser(userId) || canManageCommunity(communityId);
+      }
+    }
+
+    match /processedStripeEvents/{eventId} {
+      allow read, write: if false;
+    }
+  }
+}
