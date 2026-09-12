@@ -58,7 +58,6 @@ export default function HomePage() {
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h2 className="font-serif text-3xl text-ink">Active Chema</h2>
-            <p className="mt-2 text-sm text-ink-muted">Families being held by their people right now.</p>
           </div>
           <Link href="/campaigns" className="hidden text-sm text-forest sm:block">
             View all
